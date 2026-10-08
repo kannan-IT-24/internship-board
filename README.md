@@ -3,6 +3,9 @@
 ## About
 **InternHub** is a modern, responsive, and accessible single-page web application designed for students and graduates to discover verified internship opportunities. Built as part of the **EdVyro Full Stack Development Task 1**, it empowers applicants to effortlessly search across titles, skills, IDs, modes, and locations, filter by domain and work mode, view detailed job descriptions in an accessible modal dialog, and interact with robust empty and error states.
 
+- **Live URL**: [https://kannan-IT-24.github.io/internship-board/](https://kannan-IT-24.github.io/internship-board/)
+- **Repository**: [https://github.com/kannan-IT-24/internship-board](https://github.com/kannan-IT-24/internship-board)
+
 ---
 
 ## Features
