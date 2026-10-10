@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function ErrorState({ onRetry }) {
+export default function ErrorState({ onRetry, message }) {
   return (
     <div className="error-state" role="alert">
       <div className="error-icon" aria-hidden="true">
@@ -8,7 +8,7 @@ export default function ErrorState({ onRetry }) {
       </div>
       <h3 className="error-title">Unable to load internships</h3>
       <p className="error-text">
-        Something went wrong while loading internship data.
+        {message || 'Something went wrong while loading internship data.'}
       </p>
       <button
         type="button"

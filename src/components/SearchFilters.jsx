@@ -13,6 +13,8 @@ export default function SearchFilters({
   resultCount,
   totalCount,
   onSimulateError,
+  domains = DOMAINS,
+  modes = MODES,
 }) {
   return (
     <div className="search-filters-wrapper">
@@ -29,7 +31,7 @@ export default function SearchFilters({
               id="search-input"
               type="text"
               className="search-input"
-              placeholder="Search by title, skill (e.g. SQL), role, ID, mode, location..."
+              placeholder="Search by title, domain, role, ID, mode (e.g. Frontend, Remote, INT-001)..."
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
               autoComplete="off"
@@ -59,7 +61,7 @@ export default function SearchFilters({
                 value={selectedDomain}
                 onChange={(e) => onDomainChange(e.target.value)}
               >
-                {DOMAINS.map((domain) => (
+                {domains.map((domain) => (
                   <option key={domain} value={domain}>
                     {domain}
                   </option>
@@ -79,7 +81,7 @@ export default function SearchFilters({
                 value={selectedMode}
                 onChange={(e) => onModeChange(e.target.value)}
               >
-                {MODES.map((mode) => (
+                {modes.map((mode) => (
                   <option key={mode} value={mode}>
                     {mode}
                   </option>
