@@ -13,6 +13,11 @@ export function createApp(customDb = null) {
   // Attach database instance to app locals for dependency injection/testing
   app.locals.db = customDb || getDb();
 
+  // Enable proxy trust when behind cloud load balancers (e.g. Render, Railway)
+  if (process.env.NODE_ENV === 'production' || process.env.TRUST_PROXY) {
+    app.set('trust proxy', 1);
+  }
+
   // -----------------------------------------------------------------------
   // Security Headers via Helmet
   // Sets X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security,
