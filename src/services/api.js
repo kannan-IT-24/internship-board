@@ -38,10 +38,18 @@ export async function getInternships({ page = 1, limit = 50, q, domain, mode } =
 
     const data = await response.json();
 
-    if (!response.ok || data.status === 'error') {
+    if (!response.ok || data?.status === 'error') {
       const errorMessage = data?.error?.message || `Request failed with status ${response.status}`;
       const errorCode = data?.error?.code || 'FETCH_ERROR';
       throw new ApiError(errorMessage, errorCode, response.status);
+    }
+
+    if (!Array.isArray(data?.data)) {
+      throw new ApiError(
+        'The backend returned an invalid internship list.',
+        'INVALID_RESPONSE',
+        response.status
+      );
     }
 
     return data;

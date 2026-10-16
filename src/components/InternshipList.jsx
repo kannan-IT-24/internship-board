@@ -6,9 +6,15 @@ export default function InternshipList({
   internships,
   onSelect,
   onClearFilters,
+  hasActiveFilters,
 }) {
   if (internships.length === 0) {
-    return <EmptyState onClearFilters={onClearFilters} />;
+    return (
+      <EmptyState
+        onClearFilters={onClearFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
+    );
   }
 
   return (

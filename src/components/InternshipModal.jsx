@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { submitApplication } from '../services/api';
 
+// RFC 5322-compatible email regex — mirrors the server-side validator
+const EMAIL_REGEX =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
 export default function InternshipModal({ internship, onClose }) {
   const [applicantName, setApplicantName] = useState('');
   const [applicantEmail, setApplicantEmail] = useState('');
@@ -11,6 +15,7 @@ export default function InternshipModal({ internship, onClose }) {
   const modalRef = useRef(null);
   const closeButtonRef = useRef(null);
   const previousActiveElement = useRef(null);
+  const submissionInProgress = useRef(false);
 
   useEffect(() => {
     // Store previous focused element to restore when modal closes
@@ -27,7 +32,7 @@ export default function InternshipModal({ internship, onClose }) {
 
     // Keyboard handlers: Escape to close and Tab trapping
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && !submissionInProgress.current) {
         event.preventDefault();
         onClose();
         return;
@@ -90,39 +95,45 @@ export default function InternshipModal({ internship, onClose }) {
     : [domain, mode, `${duration_weeks || 4} Weeks`];
 
   const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget && !submissionInProgress.current) {
       onClose();
     }
   };
 
   const handleSubmitApplication = async (e) => {
     e.preventDefault();
-    if (isSubmitting || isClosed) return;
+    if (submissionInProgress.current || isClosed) return;
 
-    if (!applicantName.trim() || applicantName.trim().length < 2) {
+    const trimmedName = applicantName.trim();
+    if (trimmedName.length < 2 || trimmedName.length > 100) {
       setSubmitStatus({
         type: 'error',
-        message: 'Please provide your full name (at least 2 characters).',
+        message: 'Please provide your full name (2 to 100 characters).',
       });
       return;
     }
 
-    if (!applicantEmail.trim() || !applicantEmail.includes('@')) {
+    const trimmedEmail = applicantEmail.trim();
+    if (
+      trimmedEmail.length > 255 ||
+      !EMAIL_REGEX.test(trimmedEmail.toLowerCase())
+    ) {
       setSubmitStatus({
         type: 'error',
-        message: 'Please provide a valid email address.',
+        message: 'Please provide a valid email address (e.g. name@example.com).',
       });
       return;
     }
 
+    submissionInProgress.current = true;
     setIsSubmitting(true);
     setSubmitStatus(null);
 
     try {
       const response = await submitApplication({
         internship_id: id,
-        applicant_name: applicantName.trim(),
-        applicant_email: applicantEmail.trim(),
+        applicant_name: trimmedName,
+        applicant_email: trimmedEmail,
       });
 
       setSubmitStatus({
@@ -137,6 +148,7 @@ export default function InternshipModal({ internship, onClose }) {
         message: err.message || 'Failed to submit application. Please try again.',
       });
     } finally {
+      submissionInProgress.current = false;
       setIsSubmitting(false);
     }
   };
@@ -177,6 +189,7 @@ export default function InternshipModal({ internship, onClose }) {
             className="modal-close-btn"
             ref={closeButtonRef}
             onClick={onClose}
+            disabled={isSubmitting}
             aria-label="Close internship details modal"
           >
             ✕
@@ -275,6 +288,8 @@ export default function InternshipModal({ internship, onClose }) {
                     placeholder="e.g. Kannan G"
                     value={applicantName}
                     onChange={(e) => setApplicantName(e.target.value)}
+                    maxLength={100}
+                    autoComplete="name"
                     required
                     disabled={isSubmitting}
                   />
@@ -296,6 +311,8 @@ export default function InternshipModal({ internship, onClose }) {
                     placeholder="e.g. kannan@example.com"
                     value={applicantEmail}
                     onChange={(e) => setApplicantEmail(e.target.value)}
+                    maxLength={255}
+                    autoComplete="email"
                     required
                     disabled={isSubmitting}
                   />
@@ -349,6 +366,7 @@ export default function InternshipModal({ internship, onClose }) {
             type="button"
             className="btn btn-secondary modal-cancel-btn"
             onClick={onClose}
+            disabled={isSubmitting}
           >
             Close
           </button>

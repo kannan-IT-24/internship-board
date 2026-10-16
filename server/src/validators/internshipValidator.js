@@ -2,11 +2,17 @@ import { ValidationError } from '../utils/errors.js';
 
 const ALLOWED_MODES = ['Remote', 'Hybrid', 'On-site'];
 
+// Maximum character lengths for query string parameters
+const QUERY_MAX_LENGTH = 200;
+const DOMAIN_MAX_LENGTH = 100;
+const MODE_MAX_LENGTH = 20;
+
 /**
  * Validates pagination query parameters for list endpoints.
+ * Also validates and limits search/filter query parameters (q, domain, mode).
  */
 export function validatePagination(req, res, next) {
-  let { page = 1, limit = 10 } = req.query;
+  let { page = 1, limit = 10, q, domain, mode } = req.query;
 
   // Validate page
   if (typeof page === 'string') {
@@ -18,7 +24,7 @@ export function validatePagination(req, res, next) {
     return next(new ValidationError('Page parameter must be a positive integer.'));
   }
 
-  if (page < 1) {
+  if (!Number.isSafeInteger(page) || page < 1) {
     return next(new ValidationError('Page parameter must be at least 1.'));
   }
 
@@ -34,6 +40,22 @@ export function validatePagination(req, res, next) {
 
   if (limit < 1 || limit > 100) {
     return next(new ValidationError('Limit parameter must be between 1 and 100.'));
+  }
+
+  // Limit query string parameter sizes to prevent oversized inputs
+  for (const [name, value, maxLength] of [
+    ['q', q, QUERY_MAX_LENGTH],
+    ['domain', domain, DOMAIN_MAX_LENGTH],
+    ['mode', mode, MODE_MAX_LENGTH],
+  ]) {
+    if (value !== undefined && typeof value !== 'string') {
+      return next(new ValidationError(`${name} must be a single string value.`));
+    }
+    if (typeof value === 'string' && value.length > maxLength) {
+      return next(
+        new ValidationError(`${name} must not exceed ${maxLength} characters.`)
+      );
+    }
   }
 
   req.pagination = { page, limit };

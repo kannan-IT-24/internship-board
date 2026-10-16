@@ -12,9 +12,16 @@
 export function errorHandler(err, req, res, _next) {
   const statusCode = err.statusCode || (err.status && Number.isInteger(err.status) ? err.status : 500);
 
-  // Map known SQLite errors to user-safe error responses
   let code = err.code || 'INTERNAL_SERVER_ERROR';
   let message = err.message || 'An unexpected server error occurred.';
+
+  if (err.type === 'entity.parse.failed') {
+    code = 'INVALID_JSON';
+    message = 'Request body must contain valid JSON.';
+  } else if (err.type === 'entity.too.large') {
+    code = 'PAYLOAD_TOO_LARGE';
+    message = 'Request body exceeds the allowed size.';
+  }
 
   // Handle SQLite constraint violations safely without leaking internal schema or raw queries
   if (err.message && err.message.includes('UNIQUE constraint failed')) {
@@ -25,15 +32,15 @@ export function errorHandler(err, req, res, _next) {
     message = 'Referenced resource does not exist or has related dependencies.';
   }
 
-  // Do not expose stack traces or raw SQL in client responses
-  if (statusCode >= 500 && process.env.NODE_ENV === 'production') {
+  // Never expose internal error details, regardless of deployment environment.
+  if (statusCode >= 500) {
     code = 'INTERNAL_SERVER_ERROR';
     message = 'An unexpected internal server error occurred.';
   }
 
-  // Log non-sensitive error summary (prevent applicant PII leakage)
+  // Avoid logging error messages and query strings, which may contain user data.
   if (statusCode >= 500) {
-    console.error(`[Server Error] ${req.method} ${req.originalUrl}:`, err.message);
+    console.error(`[Server Error] ${req.method} (${err.code || 'UNKNOWN'})`);
   }
 
   res.status(statusCode).json({

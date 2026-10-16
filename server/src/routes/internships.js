@@ -5,13 +5,14 @@ import {
   validateCreateInternship,
   validateUpdateInternship,
 } from '../validators/internshipValidator.js';
+import { requireAdminAuth } from '../middleware/adminAuth.js';
 
 const router = Router();
 
 router.get('/', validatePagination, InternshipsController.list);
 router.get('/:id', InternshipsController.getById);
-router.post('/', validateCreateInternship, InternshipsController.create);
-router.put('/:id', validateUpdateInternship, InternshipsController.update);
-router.delete('/:id', InternshipsController.delete);
+router.post('/', requireAdminAuth, validateCreateInternship, InternshipsController.create);
+router.put('/:id', requireAdminAuth, validateUpdateInternship, InternshipsController.update);
+router.delete('/:id', requireAdminAuth, InternshipsController.delete);
 
 export default router;

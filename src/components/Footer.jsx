@@ -1,5 +1,7 @@
 import React from 'react';
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export default function Footer() {
   return (
     <footer className="footer" id="about">
@@ -41,7 +43,7 @@ export default function Footer() {
 
         <div className="footer-bottom">
           <p className="footer-copy">
-            &copy; {new Date().getFullYear()} InternHub. All rights reserved.
+            &copy; {CURRENT_YEAR} InternHub. All rights reserved.
           </p>
         </div>
       </div>

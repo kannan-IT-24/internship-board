@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import SearchFilters from './components/SearchFilters';
@@ -7,7 +7,11 @@ import InternshipModal from './components/InternshipModal';
 import ErrorState from './components/ErrorState';
 import Footer from './components/Footer';
 import { getInternships } from './services/api';
-import { DOMAINS, MODES } from './data/internships';
+import { DOMAINS, INTERNSHIP_DATA, MODES } from './data/internships';
+
+const staticDetailsById = new Map(
+  INTERNSHIP_DATA.map((internship) => [internship.id, internship])
+);
 
 export default function App() {
   const [internships, setInternships] = useState([]);
@@ -19,25 +23,40 @@ export default function App() {
   const [selectedMode, setSelectedMode] = useState('All Modes');
   const [selectedInternship, setSelectedInternship] = useState(null);
 
-  // Fetch internships from Express + SQLite REST API
-  const loadInternships = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage(null);
-    try {
-      const response = await getInternships({ limit: 100 });
-      setInternships(response.data || []);
-    } catch (err) {
-      setErrorMessage(
-        err.message || 'Unable to load internships from backend server.'
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
+  // Fetch internships from Express + SQLite REST API on mount
   useEffect(() => {
-    loadInternships();
-  }, [loadInternships]);
+    let ignore = false;
+
+    async function fetchData() {
+      try {
+        const response = await getInternships({ limit: 100 });
+        if (!ignore) {
+          setInternships(
+            response.data.map((internship) => ({
+              ...(staticDetailsById.get(internship.id) || {}),
+              ...internship,
+            }))
+          );
+        }
+      } catch (err) {
+        if (!ignore) {
+          setErrorMessage(
+            err.message || 'Unable to load internships from backend server.'
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   // Check if any filters or search are active
   const hasActiveFilters =
@@ -53,8 +72,24 @@ export default function App() {
   };
 
   // Reset error state and reload from API
-  const handleRetry = () => {
-    loadInternships();
+  const handleRetry = async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    try {
+      const response = await getInternships({ limit: 100 });
+      setInternships(
+        response.data.map((internship) => ({
+          ...(staticDetailsById.get(internship.id) || {}),
+          ...internship,
+        }))
+      );
+    } catch (err) {
+      setErrorMessage(
+        err.message || 'Unable to load internships from backend server.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Trigger error simulation for manual UI testing
@@ -98,7 +133,9 @@ export default function App() {
           ? `${item.duration_weeks} weeks`.includes(query)
           : false;
         const matchSkills = Array.isArray(item.skills)
-          ? item.skills.some((skill) => skill.toLowerCase().includes(query))
+          ? item.skills.some(
+              (skill) => typeof skill === 'string' && skill.toLowerCase().includes(query)
+            )
           : false;
 
         return (
@@ -197,6 +234,7 @@ export default function App() {
                   internships={filteredInternships}
                   onSelect={setSelectedInternship}
                   onClearFilters={handleClearFilters}
+                  hasActiveFilters={hasActiveFilters}
                 />
               </>
             )}

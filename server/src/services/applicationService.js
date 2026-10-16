@@ -34,7 +34,7 @@ export class ApplicationService {
 
     if (existing) {
       throw new ConflictError(
-        `You have already submitted an application for internship '${internship_id}' with email '${applicant_email}'.`
+        `You have already submitted an application for internship '${internship_id}'.`
       );
     }
 
@@ -59,7 +59,7 @@ export class ApplicationService {
     } catch (err) {
       if (err.message && err.message.includes('UNIQUE constraint failed')) {
         throw new ConflictError(
-          `You have already submitted an application for internship '${internship_id}' with email '${applicant_email}'.`
+          `You have already submitted an application for internship '${internship_id}'.`
         );
       }
       throw err;
@@ -76,7 +76,7 @@ export class ApplicationService {
 
     const offset = (page - 1) * limit;
     const selectSql = `
-      SELECT id, internship_id, applicant_name, applicant_email, created_at
+      SELECT id, internship_id, created_at
       FROM applications
       ORDER BY id DESC
       LIMIT ? OFFSET ?

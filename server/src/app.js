@@ -1,9 +1,11 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import internshipsRouter from './routes/internships.js';
-import applicationsRouter from './routes/applications.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { createGeneralLimiter, createApplicationSubmitLimiter } from './middleware/rateLimiter.js';
 import { getDb } from './config/database.js';
+import { createApplicationsRouter } from './routes/applications.js';
 
 export function createApp(customDb = null) {
   const app = express();
@@ -11,41 +13,71 @@ export function createApp(customDb = null) {
   // Attach database instance to app locals for dependency injection/testing
   app.locals.db = customDb || getDb();
 
-  // Basic security hardening
+  // -----------------------------------------------------------------------
+  // Security Headers via Helmet
+  // Sets X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security,
+  // Content-Security-Policy, Referrer-Policy, X-DNS-Prefetch-Control, etc.
+  // -----------------------------------------------------------------------
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'none'"],
+          frameAncestors: ["'none'"],
+        },
+      },
+      crossOriginResourcePolicy: { policy: 'same-site' },
+    })
+  );
+
+  // Remove X-Powered-By (belt-and-suspenders: helmet already removes it)
   app.disable('x-powered-by');
 
-  // CORS configuration
-  const allowedOrigins = [
-    process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
-    'http://localhost:3000',
-    'http://127.0.0.1:5173',
-  ];
+  // -----------------------------------------------------------------------
+  // CORS — configured via environment variable, never hardcoded
+  // -----------------------------------------------------------------------
+  const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  const developmentOrigins =
+    process.env.NODE_ENV === 'production'
+      ? []
+      : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
 
   app.use(
     cors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (e.g. curl, tests, mobile)
+        // Allow requests with no origin (e.g. curl, Node test runner, Postman)
         if (!origin) return callback(null, true);
-        if (
-          allowedOrigins.includes(origin) ||
-          origin.endsWith('.github.io') ||
-          process.env.NODE_ENV !== 'production'
-        ) {
+
+        if (allowedOrigins.includes(origin) || developmentOrigins.includes(origin)) {
           return callback(null, true);
         }
-        callback(null, true); // Permissive in local demo mode, safe origins
+        callback(null, false);
       },
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
-      credentials: true,
+      credentials: false,
     })
   );
 
+  // -----------------------------------------------------------------------
   // Request body parsing with strict size limits
+  // -----------------------------------------------------------------------
   app.use(express.json({ limit: '100kb' }));
   app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 
-  // Health check endpoint
+  // -----------------------------------------------------------------------
+  // General rate limiting applied to all /api/* routes.
+  // Each createApp() call gets its own limiter instance (safe for test isolation).
+  // -----------------------------------------------------------------------
+  app.use('/api/', createGeneralLimiter());
+
+  // -----------------------------------------------------------------------
+  // Health check endpoint — unauthenticated, no PII
+  // -----------------------------------------------------------------------
   app.get('/api/health', (req, res) => {
     res.status(200).json({
       status: 'success',
@@ -56,14 +88,17 @@ export function createApp(customDb = null) {
     });
   });
 
+  // -----------------------------------------------------------------------
   // Mount API routers
+  // applications router receives its own limiter instance for isolation
+  // -----------------------------------------------------------------------
   app.use('/api/internships', internshipsRouter);
-  app.use('/api/applications', applicationsRouter);
+  app.use('/api/applications', createApplicationsRouter(createApplicationSubmitLimiter()));
 
   // 404 handler for unknown routes
   app.use(notFoundHandler);
 
-  // Centralized error handler
+  // Centralized error handler (must be last)
   app.use(errorHandler);
 
   return app;
