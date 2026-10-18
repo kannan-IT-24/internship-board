@@ -2,32 +2,35 @@
 
 > **EdVyro Full Stack Development Task 3: Secure Application Integration**
 >
-> Complete, production-grade integration featuring Helmet security headers, configurable rate limiting, administrative authentication, robust server + client validation, parameterized SQLite operations, 60 automated tests, and deployment readiness.
+> A React and Express internship board with server-side validation, parameterized SQLite queries, security middleware, and automated API tests.
 
-- **Live Frontend**: [https://kannan-IT-24.github.io/internship-board/](https://kannan-IT-24.github.io/internship-board/)
+- **Live Frontend**: [https://kannan-it-24.github.io/internship-board/](https://kannan-it-24.github.io/internship-board/)
+- **Live Backend**: [https://internship-board-goud.onrender.com](https://internship-board-goud.onrender.com/)
+- **API Health Check**: [https://internship-board-goud.onrender.com/api/health](https://internship-board-goud.onrender.com/api/health)
+- **Internships API**: [https://internship-board-goud.onrender.com/api/internships](https://internship-board-goud.onrender.com/api/internships)
 - **GitHub Repository**: [https://github.com/kannan-IT-24/internship-board](https://github.com/kannan-IT-24/internship-board)
 
 ---
 
 ## 1. Project Overview & Task 3 Satisfaction
 
-**InternHub** is a secure, accessible, full-stack internship portal enabling students and graduates to discover verified internships and submit job applications.
+**InternHub** is a full-stack internship portal where students and graduates can browse internship listings and submit applications.
 
 ### How this project fulfills EdVyro Task 3:
 1. **API Data Fetching with Visible States**: React frontend asynchronously fetches internship data from the Express REST API, rendering an animated loading spinner during in-flight requests and an accessible `ErrorState` with a **Try Again** retry mechanism upon failure.
-2. **Dual-Layer Application Validation**: Application submission enforces strict name (2–100 chars) and email (RFC 5322 regex) validation in both the React modal and Express middleware. Rejects duplicate submissions, closed internships, and nonexistent positions with appropriate HTTP status codes (`400`, `404`, `409`).
+2. **Dual-Layer Application Validation**: Application submission checks name length (2–100 characters) and email format in both the React modal and Express middleware. The API rejects duplicate submissions, closed internships, and nonexistent positions with appropriate HTTP status codes (`400`, `404`, `409`).
 3. **Multi-Tier API Protection**:
    - **Rate Limiting**: Configurable global limiter (200 req/15 min) and strict submission limiter (10 req/15 min).
    - **Secure Headers**: Full Helmet suite (`X-Content-Type-Options: nosniff`, CSP frame protection, HSTS, Referrer-Policy, `x-powered-by` disabled).
-   - **Administrative Authentication**: Mutation endpoints (`POST`, `PUT`, `DELETE /api/internships`) are protected by `requireAdminAuth` using `x-api-key` or Bearer tokens. In production, unauthenticated mutations are safely disabled (403 Forbidden).
+   - **Administrative Authentication**: Internship mutation endpoints (`POST`, `PUT`, `DELETE /api/internships`) use `requireAdminAuth`. When `ADMIN_API_KEY` is set, callers must send it using `x-api-key` or `Authorization: Bearer <key>`. In production, mutations are disabled (403 Forbidden) if no key is configured.
    - **Parameterized SQL**: All database operations use `node:sqlite` parameter binding with `?` placeholders to prevent SQL injection.
-4. **Automated Testing & Public Submission**: 60 automated tests across 2 test suites verifying all functional endpoints, error envelopes, rate limits, headers, applicant privacy, and authorization. Deployed publicly via GitHub Pages with full source code on GitHub.
+4. **Automated Testing & Public Submission**: 61 automated backend tests across 2 test suites verify API behavior, validation, error envelopes, rate limits, headers, applicant privacy, CORS, and authorization. The frontend is deployed on GitHub Pages and the backend on Render.
 
 ---
 
 ## 2. Key Features
 
-### Backend Security (Task 4 additions)
+### Backend security
 - **Helmet Security Headers**: `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy`, `Strict-Transport-Security`, `Referrer-Policy`, `X-DNS-Prefetch-Control`.
 - **Rate Limiting**: General limiter on all `/api/*` routes (200 req/15 min). Strict limiter on `POST /api/applications` (10 req/15 min). Both fully configurable via environment variables.
 - **Query Parameter Validation**: Enforces maximum character lengths on `q` (200), `domain` (100), and `mode` (20) to prevent oversized inputs.
@@ -35,7 +38,7 @@
 - **CORS**: Production allows the exact hosted frontend origin and additional exact origins in `FRONTEND_ORIGIN` (comma-separated); local development also allows the documented localhost origins.
 - **No Secret Leakage**: `x-powered-by` suppressed. Internal errors and malformed JSON details are sanitized in every environment. Applicant names/emails are omitted from application listings and are not written to server logs.
 
-### Backend (Task 3 preserved)
+### Backend
 - **Persistent Storage**: SQLite enforcing foreign keys and `UNIQUE(internship_id, applicant_email)` constraint.
 - **Full CRUD**: `GET`, `POST`, `PUT`, `DELETE` for internships; application submission (`POST`); listing (`GET`); health check.
 - **Parameterized Queries**: All user-controlled values bound via `?` placeholders — no string interpolation into SQL.
@@ -46,7 +49,7 @@
 ### Frontend (preserved and integrated)
 - **Live API Data Fetching**: React fetches from Express API via `src/services/api.js`. Uses `VITE_API_BASE_URL` env var.
 - **Loading / Error / Empty States**: Visible spinner on load; friendly error banner with **Try Again** button; empty state with **Clear Filters** button.
-- **Application Form**: Client validates name (≥2 chars) and email (RFC 5322 regex matching server). Prevents double-submission while request is in-flight.
+- **Application Form**: Client validates name length and email format using the same validation rules as the server. Prevents double-submission while a request is in flight.
 - **Closed Internship Guard**: Apply button disabled; locked message shown for closed positions.
 
 ---
@@ -59,7 +62,7 @@
 | **Backend** | Node.js v24, Express.js 4, SQLite (`node:sqlite` built-in) |
 | **Security** | Helmet 8, express-rate-limit 7, CORS (env-driven), body size limits |
 | **Testing** | Node.js Test Runner (`node --test`), Supertest |
-| **Deployment** | GitHub Pages (frontend), Local Node.js (backend) |
+| **Deployment** | GitHub Pages (frontend), Render (backend) |
 
 ---
 
@@ -70,14 +73,14 @@
          │
          │ HTTP / JSON — CORS-restricted to allowed origins
          ▼
-[ Express.js REST API (Port 5000) ]
+[ Express.js REST API (Port 5000 locally; Render in production) ]
    ├── Helmet Middleware   ──── Security headers on every response
-   ├── CORS Middleware     ──── Origin allowlist (env-configured)
+   ├── CORS Middleware     ──── Exact frontend origin and configured allowlist
    ├── Body Parser         ──── JSON, urlencoded (100 KB max)
    ├── General Rate Limiter ─── /api/*: 200 req / 15 min per IP
    ├── Routing Layer
-   │    ├── /api/internships  → Internship CRUD
-   │    └── /api/applications → Submit Limiter → Application CRUD
+   │    ├── /api/internships  → Read + authenticated create/update/delete
+   │    └── /api/applications → Submit Limiter → Submit + paginated list
    ├── Validation Middleware
    ├── Controller Layer
    ├── Service Layer (parameterized SQL)
@@ -108,6 +111,7 @@ internship-board/
 │   │   │   └── seed.js                 # Idempotent seed (4 records)
 │   │   ├── middleware/
 │   │   │   ├── errorHandler.js         # Centralized safe error mapper
+│   │   │   ├── adminAuth.js            # Protects internship mutations
 │   │   │   └── rateLimiter.js          # Factory fns: general + submit limiters
 │   │   ├── routes/
 │   │   │   ├── applications.js         # Factory router (inject limiter)
@@ -123,11 +127,14 @@ internship-board/
 │   │   ├── app.js                      # Express app factory (Helmet, CORS, limiters)
 │   │   └── server.js                   # HTTP server entry point
 │   ├── tests/
-│   │   ├── api.test.js                 # 26 Task 3 integration tests
-│   │   └── security.test.js            # 29 Task 4 security tests
+│   │   ├── api.test.js                 # API integration tests
+│   │   └── security.test.js            # Security and validation tests
 │   ├── .env.example
 │   └── package.json
 ├── src/                                # React frontend
+│   ├── assets/
+│   ├── data/
+│   │   └── internships.js              # Static details joined to API records by ID
 │   ├── components/
 │   │   ├── EmptyState.jsx
 │   │   ├── ErrorState.jsx
@@ -138,12 +145,13 @@ internship-board/
 │   │   ├── InternshipList.jsx
 │   │   ├── InternshipModal.jsx         # RFC 5322 email validation
 │   │   └── SearchFilters.jsx
-│   ├── data/internships.js
 │   ├── services/api.js                 # Centralized API client
 │   ├── App.jsx
 │   ├── index.css
 │   └── main.jsx
+├── public/                             # Static public assets
 ├── .env.example
+├── .github/workflows/deploy.yml        # GitHub Pages frontend build/deploy
 ├── index.html
 ├── package.json
 └── vite.config.js
@@ -169,14 +177,12 @@ cd internship-board
 
 ### 2. Install frontend dependencies
 ```bash
-npm install
+npm ci
 ```
 
 ### 3. Install backend dependencies
 ```bash
-cd server
-npm install
-cd ..
+npm --prefix server ci
 ```
 
 ### 4. Configure environment variables
@@ -200,13 +206,15 @@ APPLY_RATE_LIMIT_WINDOW_MS=900000
 APPLY_RATE_LIMIT_MAX=10
 ```
 
-> ⚠️ **Never commit `.env` files to source control.** Both are listed in `.gitignore`.
+The backend loads `server/.env` when it starts. The root `.env` is read by Vite when building or running the frontend.
+
+> **Never commit `.env` files or real admin keys.** Environment files are ignored by Git. `VITE_API_BASE_URL` is included in the browser bundle, so it must contain only a public API URL, never a secret.
 
 ---
 
 ## 8. Database Initialization & Seeding
 
-Run from the **project root** (uses npm workspace scripts):
+The backend initializes the schema and inserts any missing sample internships automatically when it starts. You can also run these commands from the **project root**:
 
 ### Initialize schema (creates tables)
 ```bash
@@ -242,7 +250,7 @@ Database seeded successfully: 4 inserted, 0 already existed (preserved).
 ```bash
 # From project root
 npm run server:dev      # Development (auto-restarts on changes)
-npm run server          # Production start
+npm run server          # Start without watch mode
 ```
 
 Console output:
@@ -261,6 +269,8 @@ Database connected and initialized.
 npm run dev
 ```
 Opens at `http://localhost:5173`.
+
+The live frontend uses the Render backend. GitHub Actions gets the frontend API URL from the repository variable `VITE_API_BASE_URL` (or a secret with that name) when it builds the site.
 
 ---
 
@@ -289,6 +299,7 @@ GET /api/internships/:id
 ```http
 POST /api/internships
 Content-Type: application/json
+x-api-key: <ADMIN_API_KEY>
 
 {
   "id": "INT-005",
@@ -304,6 +315,7 @@ Content-Type: application/json
 ```http
 PUT /api/internships/:id
 Content-Type: application/json
+x-api-key: <ADMIN_API_KEY>
 
 { "title": "...", "domain": "...", "mode": "Remote", "duration_weeks": 6, "applications_open": 1 }
 ```
@@ -312,7 +324,7 @@ Content-Type: application/json
 ```http
 DELETE /api/internships/:id
 ```
-Returns `409 Conflict` if active applications exist.
+Create, update, and delete requests need admin credentials when `ADMIN_API_KEY` is configured. In production, these operations return `403 Forbidden` when the key is not configured. The same key can be sent as `Authorization: Bearer <ADMIN_API_KEY>`. Deleting an internship returns `409 Conflict` if applications exist for it.
 
 ### Submit Application
 ```http
@@ -332,7 +344,7 @@ Content-Type: application/json
 - `internship_id`: required, must exist and have `applications_open = 1`
 - Duplicate `(internship_id, applicant_email)` → `409 Conflict`
 
-A successful submission echoes the submitted applicant fields alongside its reference ID. `GET /api/applications` omits applicant names and email addresses.
+A successful submission response includes the submitted applicant fields and its reference ID. `GET /api/applications` intentionally omits applicant names and email addresses.
 
 ### List Applications
 ```http
@@ -364,36 +376,33 @@ npm test
 node --test tests/api.test.js tests/security.test.js
 ```
 
-### Actual test results (verified on 2026-10-16, Node v24.21.0)
+### Actual test results (verified on 2026-10-18, Node v24.21.0, npm 11.19.0)
 
 ```
 npm test
-ℹ tests 60
+ℹ tests 61
 ℹ suites 2
-ℹ pass 60
+ℹ pass 61
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ```
 
 Coverage includes:
-- **26 REST API integration tests**: health checks, CRUD endpoints, query filtering, pagination, SQL injection protection, constraint enforcement.
-- **34 security & integration tests**: Helmet headers, `x-powered-by` suppression, query bounds, applicant validation edge cases, duplicate & closed guards, general & submission rate limits, body size limits, error envelope consistency, applicant PII redaction, and administrative authentication.
+- **26 REST API integration tests**: health checks, internship and application endpoints, query filtering, pagination, SQL injection protection, and constraint enforcement.
+- **35 security & integration tests**: Helmet headers, CORS and preflight, `x-powered-by` suppression, query bounds, applicant validation, duplicate and closed-internship guards, rate limits, body size limits, error envelope consistency, applicant privacy, and administrative authentication.
 
-Manual browser checks: delayed API loading indicator; empty inventory and filtered-empty states; API error and Retry recovery; filter clearing; 360px layout without horizontal overflow; client-side name/email validation; and successful application submission against the local API.
+The frontend does not currently have an automated UI test script. Its build and lint checks are run separately.
 
 ### Frontend Build
-```
-✓ vite build → 27 modules transformed, built in 143ms
-```
-No build errors or warnings.
+`npm run build` passed: Vite transformed 27 modules and completed without build errors.
 
 ### Frontend lint
 ```bash
 npm run lint
 ```
 
-Actual result: `oxlint` exited successfully with **0 warnings and 0 errors** across all 32 project files.
+Actual result: `oxlint` exited successfully without reporting warnings or errors.
 
 ---
 
@@ -402,7 +411,7 @@ Actual result: `oxlint` exited successfully with **0 warnings and 0 errors** acr
 | Feature | Status | Details |
 |---------|--------|---------|
 | **Helmet security headers** | ✅ | `X-Content-Type-Options`, `X-Frame-Options`, `CSP`, `HSTS`, `Referrer-Policy` |
-| **Administrative authentication** | ✅ | Mutation routes (`POST/PUT/DELETE /api/internships`) require `ADMIN_API_KEY`; disabled in production when unconfigured |
+| **Administrative authentication** | ✅ | With `ADMIN_API_KEY`, mutation routes require `x-api-key` or `Authorization: Bearer <key>`; in production they are disabled when the key is not configured |
 | **Rate limiting — general** | ✅ | 200 req / 15 min per IP on all `/api/*` (configurable) |
 | **Rate limiting — submissions** | ✅ | 10 req / 15 min per IP on `POST /api/applications` (configurable) |
 | **CORS origin control** | ✅ | Production allows the exact hosted frontend and configured origins; no wildcard origins |
@@ -410,8 +419,8 @@ Actual result: `oxlint` exited successfully with **0 warnings and 0 errors** acr
 | **Parameterized SQL** | ✅ | All user values bound via `?` — no string interpolation |
 | **Query param length limits** | ✅ | `q` ≤ 200, `domain` ≤ 100, `mode` ≤ 20 chars |
 | **Server-side name validation** | ✅ | Required, 2–100 chars |
-| **Server-side email validation** | ✅ | RFC 5322 regex, max 255 chars |
-| **Client-side email validation** | ✅ | RFC 5322 regex (same as server) |
+| **Server-side email validation** | ✅ | Email-format regex, max 255 chars |
+| **Client-side email validation** | ✅ | Uses the same email-format regex as the server |
 | **Duplicate application guard** | ✅ | DB UNIQUE constraint + pre-check with clear 409 |
 | **Closed internship guard** | ✅ | `applications_open = 0` check before insert |
 | **Nonexistent internship guard** | ✅ | Lookup before insert, returns 404 |
@@ -421,7 +430,7 @@ Actual result: `oxlint` exited successfully with **0 warnings and 0 errors** acr
 | **PII not logged** | ✅ | Server error logs contain only the HTTP method and generic error code; error messages, paths, query strings, and request bodies are omitted |
 | **PII omitted from application listings** | ✅ | `GET /api/applications` excludes applicant names and emails |
 | **`x-powered-by` removed** | ✅ | Helmet + `app.disable('x-powered-by')` |
-| **No hardcoded secrets** | ✅ | All config via environment variables |
+| **No hardcoded secrets** | ✅ | Admin credentials are read from environment; frontend API URL is public build-time configuration |
 | **Duplicate submit prevention** | ✅ | `isSubmitting` state flag in React form |
 | **Form keyboard accessibility** | ✅ | Labeled inputs, focus trap in modal, ARIA attributes |
 
@@ -437,7 +446,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000
 Set `VITE_API_BASE_URL` in the root `.env` file before building.
 
 ### Backend (`server/src/app.js`)
-Production allows the exact hosted frontend origin (`https://kannan-it-24.github.io`) and any additional exact origins configured in `FRONTEND_ORIGIN` as a comma-separated list. Localhost origins are allowed automatically only outside production. CORS controls browser access; it is not authentication. Rate limits are read from:
+Production allows the exact hosted frontend origin (`https://kannan-it-24.github.io`) and any additional exact origins configured in `FRONTEND_ORIGIN` as a comma-separated list. Localhost origins are allowed automatically only outside production. CORS permits `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, and `OPTIONS`, and allows `Content-Type` and `Authorization` headers. `PATCH` is allowed through CORS preflight but is not currently implemented as an API route. CORS controls browser access; it is not authentication. Rate limits are read from:
 - `RATE_LIMIT_WINDOW_MS` / `RATE_LIMIT_MAX` — general limiter
 - `APPLY_RATE_LIMIT_WINDOW_MS` / `APPLY_RATE_LIMIT_MAX` — submission limiter
 
@@ -447,62 +456,53 @@ Production allows the exact hosted frontend origin (`https://kannan-it-24.github
 
 | Concern | Details |
 |---------|---------|
-| **Frontend** | Deployed to GitHub Pages (static). Hosted at `https://kannan-IT-24.github.io/internship-board/` |
-| **Backend** | **Runs locally only** — not publicly deployed. Must be started manually on `localhost:5000` |
-| **Cross-origin** | The live frontend cannot reach a local backend. The deployed page uses the API only when a local server is running |
-| **Database** | SQLite file (`server/data/internships.db`) is local. Not suitable for multi-instance production deployment |
-| **Rate limiting** | Uses in-memory store — resets on server restart, not shared across processes |
-| **Scaling** | For production: use PostgreSQL, a persistent rate-limit store (Redis), and deploy the backend to a cloud service (Railway, Render, etc.) |
-| **HTTPS** | Required for `Strict-Transport-Security` to activate. Local development uses HTTP |
-| **Environment variables** | All secrets/config must be provided via environment — never committed to source control |
+| **Frontend** | Deployed as a static site on GitHub Pages: `https://kannan-it-24.github.io/internship-board/`. `vite.config.js` sets the `/internship-board/` base path. |
+| **Backend** | Deployed separately on Render: `https://internship-board-goud.onrender.com`; local development uses `http://localhost:5000` |
+| **GitHub Actions** | `.github/workflows/deploy.yml` builds and deploys the frontend on pushes to `main` or manual dispatch. It reads `VITE_API_BASE_URL` from a repository variable, falling back to a repository secret. |
+| **Render configuration** | The repository has no checked-in Render service manifest. Configure the backend service in Render using the steps below. |
+| **CORS** | The backend allows the exact GitHub Pages frontend origin plus exact origins in `FRONTEND_ORIGIN`. CORS is not authentication. |
+| **Database** | SQLite is stored at `server/data/internships.db` locally (or `data/internships.db` when the Render root directory is `server`). Render filesystem persistence depends on the service plan and disk configuration; use persistent storage for data that must survive restarts/redeploys. |
+| **Rate limiting** | Uses an in-memory store — counters reset on server restart and are not shared across multiple backend instances. |
+| **HTTPS** | Both public deployments use HTTPS. Local development uses HTTP. |
+| **Secrets/configuration** | Keep admin credentials in backend environment variables. `VITE_API_BASE_URL` is public client configuration and must not contain secrets. |
 
 ---
 
-## 15. Task 3 Secure Application Integration Summary
+## 15. Where to Find the Implementation
 
-| Category | File(s) Changed | What Changed |
+| Category | File(s) | Responsibility |
 |----------|----------------|--------------|
-| **Headers and CORS** | `server/src/app.js` | Helmet headers; exact configured production origin allowlist; no credentialed CORS |
-| **Administrative Auth** | `server/src/middleware/adminAuth.js`, `server/src/routes/internships.js` | `requireAdminAuth` middleware guarding POST, PUT, DELETE with `ADMIN_API_KEY`; disabled in production when unconfigured |
-| **Rate limiting** | `server/src/middleware/rateLimiter.js`, `server/src/routes/applications.js` | Configurable general and application-submission limiters |
-| **Validation and errors** | `server/src/validators/internshipValidator.js`, `server/src/middleware/errorHandler.js` | Query shape/size checks; safe 4xx parser errors and sanitized 5xx responses/logging |
-| **Application privacy** | `server/src/services/applicationService.js` | Application listing omits applicant names and emails |
-| **Frontend integration** | `src/App.jsx`, `src/services/api.js` | Validate API response shape and retain static detail metadata on API-backed listings |
-| **Application form** | `src/components/InternshipModal.jsx` | Name/email bounds, synchronous duplicate-submit guard, in-flight close protection |
-| **Responsive layout** | `src/index.css` | Prevent narrow-screen grid overflow and wrap modal metadata |
-| **Environment** | `server/.env.example`, `server/package.json` | Document configurable origins, limits, and ADMIN_API_KEY; include Helmet and rate-limit middleware dependencies |
-| **Tests** | `server/tests/security.test.js` | 34 security, validation, privacy, rate-limit, and administrative auth tests |
-| **Documentation** | `README.md` | Full Task 3 documentation with security checklist, test results, API reference, and deployment guide |
+| **Express app and middleware** | `server/src/app.js` | Registers Helmet, CORS, body parsing, rate limiting, API routes, and error handlers |
+| **Administrative auth** | `server/src/middleware/adminAuth.js`, `server/src/routes/internships.js` | Protects internship create/update/delete routes |
+| **Validation and errors** | `server/src/validators/`, `server/src/middleware/errorHandler.js` | Validates API input and formats safe error responses |
+| **Database** | `server/src/config/database.js`, `server/src/db/`, `server/src/services/` | Opens SQLite, initializes/seeds data, and executes parameterized queries |
+| **Frontend integration** | `src/App.jsx`, `src/services/api.js`, `src/components/` | Fetches and displays internships, handles loading/error states, and submits applications |
+| **Automated tests** | `server/tests/api.test.js`, `server/tests/security.test.js` | Tests API behavior, security middleware, validation, privacy, and CORS |
 
 ---
 
-## 16. Step-by-Step Backend Deployment Guide (Render / Railway)
+## 16. Deploying the Backend to Render
 
-If deploying the backend to a cloud hosting platform to connect with the live frontend:
+The frontend is deployed by `.github/workflows/deploy.yml`; the backend is a separate Render web service. The currently published API is [https://internship-board-goud.onrender.com](https://internship-board-goud.onrender.com/).
 
-### Deploying to Render (Web Service):
-1. Create a free account at [render.com](https://render.com).
-2. Click **New +** > **Web Service** and connect this GitHub repository (`kannan-IT-24/internship-board`).
-3. Set the following build and start configurations:
-   - **Root Directory**: `server`
-   - **Environment**: `Node`
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
-4. Add the following **Environment Variables** in Render's dashboard:
+For a new or reconfigured Render service:
+1. Connect this GitHub repository as a Render **Web Service**.
+2. Set **Root Directory** to `server`, **Build Command** to `npm ci`, and **Start Command** to `npm start`. Select Node.js `v22.12.0` or newer to meet the backend package requirement.
+3. Set these backend environment variables:
    - `NODE_ENV`: `production`
-   - `PORT`: `5000` (or leave default assigned by Render)
    - `DATABASE_PATH`: `./data/internships.db`
-   - `FRONTEND_ORIGIN`: `https://kannan-it-24.github.io` (optional for this frontend; set this to allow additional frontend origins)
-   - `ADMIN_API_KEY`: *(generate a secure random string for admin API access)*
-5. Once deployed, Render provides an HTTPS URL (e.g. `https://internhub-api.onrender.com`).
-6. Set `VITE_API_BASE_URL=https://internhub-api.onrender.com/api` in your frontend build settings or GitHub Actions repository secrets, then rebuild the frontend.
+   - `ADMIN_API_KEY`: generate a private random value if admin internship mutations should be enabled. If it is absent in production, those mutation routes return `403 Forbidden`.
+   - `FRONTEND_ORIGIN`: optional comma-separated additional exact origins. The GitHub Pages origin is already allowed by the backend.
+   - Do not manually set `PORT` unless your hosting configuration requires it; Render supplies the port.
+4. To connect the Pages site, set the GitHub repository variable `VITE_API_BASE_URL` to `https://internship-board-goud.onrender.com/api`. The workflow can also read a repository secret of that name. Push to `main` or run the workflow manually to rebuild and deploy the frontend.
+5. Check `https://internship-board-goud.onrender.com/api/health` after deploying the backend.
 
----
+The SQLite path is relative to the backend root directory. Attach and configure persistent disk storage in Render if database contents must survive restarts or redeployments.
 
-## 17. Remaining Known Limitations
+## 17. Operational Notes and Limitations
 
-1. **Local vs. Cloud Backend**: By default, the Express API runs on `http://localhost:5000`. The static GitHub Pages frontend communicates with the local backend when running locally, or with the cloud backend when `VITE_API_BASE_URL` is pointed to the deployed backend URL.
-2. **In-memory rate limiter**: Rate limit counters reset on server restart and are memory-backed. A Redis store (e.g. `rate-limit-redis`) is recommended for multi-instance distributed deployments.
-3. **Database storage**: The SQLite database (`server/data/internships.db`) uses the local filesystem. For serverless or ephemeral platforms without persistent disk mounts, migrate to PostgreSQL or attach a persistent volume.
-4. **Skills field**: The `skills` array shown in the frontend modal comes from `src/data/internships.js` (enriching the SQLite records by ID). The SQLite schema stores `id`, `title`, `domain`, `mode`, `duration_weeks`, `applications_open`.
-5. **Reverse proxies**: When deploying behind a reverse proxy (Cloudflare, Nginx, Render), set `app.set('trust proxy', 1)` so client IP detection accurately distinguishes separate users for rate limiting.
+1. **Local vs. hosted URLs**: Local Vite uses `http://localhost:5000/api` by default. The deployed frontend needs `VITE_API_BASE_URL` set during its build because Vite embeds this value in the static JavaScript bundle.
+2. **In-memory rate limiter**: Counters reset on server restart and are not shared between backend instances. A shared store such as Redis is needed for distributed deployments.
+3. **SQLite persistence**: Locally, the database is stored in `server/data/internships.db`. Hosted persistence depends on the Render disk configuration; without persistent storage, database files may not survive service changes.
+4. **Skills display data**: The `skills` array shown in the frontend comes from `src/data/internships.js` and is joined to API records by ID. It is not stored in SQLite. The database stores `id`, `title`, `domain`, `mode`, `duration_weeks`, and `applications_open` for internships.
+5. **Reverse proxies**: The app enables `trust proxy` automatically in production. `TRUST_PROXY` can also enable it explicitly for local proxy testing.
