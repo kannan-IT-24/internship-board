@@ -149,6 +149,49 @@ describe('Task 4 – Secure Application Integration Tests', () => {
     }
   });
 
+  it('CORS should allow the hosted frontend and handle preflight requests', async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousOrigins = process.env.FRONTEND_ORIGIN;
+    process.env.NODE_ENV = 'production';
+    delete process.env.FRONTEND_ORIGIN;
+
+    try {
+      const corsApp = createApp(testDb);
+      const preflight = await request(corsApp)
+        .options('/api/applications')
+        .set('Origin', 'https://kannan-it-24.github.io')
+        .set('Access-Control-Request-Method', 'PATCH')
+        .set('Access-Control-Request-Headers', 'content-type,authorization');
+
+      assert.equal(preflight.status, 204);
+      assert.equal(
+        preflight.headers['access-control-allow-origin'],
+        'https://kannan-it-24.github.io'
+      );
+      assert.deepEqual(
+        preflight.headers['access-control-allow-methods'].split(',').map((method) => method.trim()),
+        ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+      );
+      assert.deepEqual(
+        preflight.headers['access-control-allow-headers']
+          .split(',')
+          .map((header) => header.trim().toLowerCase()),
+        ['content-type', 'authorization']
+      );
+
+      const untrusted = await request(corsApp)
+        .options('/api/applications')
+        .set('Origin', 'https://untrusted.example')
+        .set('Access-Control-Request-Method', 'POST');
+      assert.equal(untrusted.headers['access-control-allow-origin'], undefined);
+    } finally {
+      if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previousNodeEnv;
+      if (previousOrigins === undefined) delete process.env.FRONTEND_ORIGIN;
+      else process.env.FRONTEND_ORIGIN = previousOrigins;
+    }
+  });
+
   // =========================================================================
   // C. Application Form Validation – Server-side
   // =========================================================================

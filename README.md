@@ -32,7 +32,7 @@
 - **Rate Limiting**: General limiter on all `/api/*` routes (200 req/15 min). Strict limiter on `POST /api/applications` (10 req/15 min). Both fully configurable via environment variables.
 - **Query Parameter Validation**: Enforces maximum character lengths on `q` (200), `domain` (100), and `mode` (20) to prevent oversized inputs.
 - **Body Size Limits**: All request bodies capped at 100 KB.
-- **Environment-Driven CORS**: Production accepts only exact origins in `FRONTEND_ORIGIN` (comma-separated for multiple origins); local development allows the documented localhost origins.
+- **CORS**: Production allows the exact hosted frontend origin and additional exact origins in `FRONTEND_ORIGIN` (comma-separated); local development also allows the documented localhost origins.
 - **No Secret Leakage**: `x-powered-by` suppressed. Internal errors and malformed JSON details are sanitized in every environment. Applicant names/emails are omitted from application listings and are not written to server logs.
 
 ### Backend (Task 3 preserved)
@@ -405,7 +405,7 @@ Actual result: `oxlint` exited successfully with **0 warnings and 0 errors** acr
 | **Administrative authentication** | ✅ | Mutation routes (`POST/PUT/DELETE /api/internships`) require `ADMIN_API_KEY`; disabled in production when unconfigured |
 | **Rate limiting — general** | ✅ | 200 req / 15 min per IP on all `/api/*` (configurable) |
 | **Rate limiting — submissions** | ✅ | 10 req / 15 min per IP on `POST /api/applications` (configurable) |
-| **CORS origin control** | ✅ | Production allows only exact origins from `FRONTEND_ORIGIN`; no wildcard hosting origins |
+| **CORS origin control** | ✅ | Production allows the exact hosted frontend and configured origins; no wildcard origins |
 | **Body size limit** | ✅ | All requests capped at 100 KB |
 | **Parameterized SQL** | ✅ | All user values bound via `?` — no string interpolation |
 | **Query param length limits** | ✅ | `q` ≤ 200, `domain` ≤ 100, `mode` ≤ 20 chars |
@@ -437,7 +437,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000
 Set `VITE_API_BASE_URL` in the root `.env` file before building.
 
 ### Backend (`server/src/app.js`)
-Production CORS origins must be configured in `FRONTEND_ORIGIN` as a comma-separated exact-origin allowlist. Localhost origins are allowed automatically only outside production. CORS controls browser access; it is not authentication. Rate limits are read from:
+Production allows the exact hosted frontend origin (`https://kannan-it-24.github.io`) and any additional exact origins configured in `FRONTEND_ORIGIN` as a comma-separated list. Localhost origins are allowed automatically only outside production. CORS controls browser access; it is not authentication. Rate limits are read from:
 - `RATE_LIMIT_WINDOW_MS` / `RATE_LIMIT_MAX` — general limiter
 - `APPLY_RATE_LIMIT_WINDOW_MS` / `APPLY_RATE_LIMIT_MAX` — submission limiter
 
@@ -492,7 +492,7 @@ If deploying the backend to a cloud hosting platform to connect with the live fr
    - `NODE_ENV`: `production`
    - `PORT`: `5000` (or leave default assigned by Render)
    - `DATABASE_PATH`: `./data/internships.db`
-   - `FRONTEND_ORIGIN`: `https://kannan-IT-24.github.io`
+   - `FRONTEND_ORIGIN`: `https://kannan-it-24.github.io` (optional for this frontend; set this to allow additional frontend origins)
    - `ADMIN_API_KEY`: *(generate a secure random string for admin API access)*
 5. Once deployed, Render provides an HTTPS URL (e.g. `https://internhub-api.onrender.com`).
 6. Set `VITE_API_BASE_URL=https://internhub-api.onrender.com/api` in your frontend build settings or GitHub Actions repository secrets, then rebuild the frontend.

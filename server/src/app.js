@@ -39,12 +39,15 @@ export function createApp(customDb = null) {
   app.disable('x-powered-by');
 
   // -----------------------------------------------------------------------
-  // CORS — configured via environment variable, never hardcoded
+  // CORS — allow the hosted frontend plus explicitly configured exact origins
   // -----------------------------------------------------------------------
-  const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean);
+  const allowedOrigins = [
+    'https://kannan-it-24.github.io',
+    ...(process.env.FRONTEND_ORIGIN || '')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean),
+  ];
 
   const developmentOrigins =
     process.env.NODE_ENV === 'production'
@@ -62,7 +65,7 @@ export function createApp(customDb = null) {
         }
         callback(null, false);
       },
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
       credentials: false,
     })
