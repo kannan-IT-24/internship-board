@@ -1,6 +1,8 @@
-# InternHub — Full-Stack Internship Board
+# InternHub Full-Stack Internship Board
 
-> **EdVyro Full Stack Development Task 3: Secure Application Integration**
+> **EdVyro Full Stack Development — Final Task 4: Production-Readiness Capstone**
+>
+> Builds on Task 3: Secure Application Integration with end-to-end production-readiness checks.
 >
 > A React and Express internship board with server-side validation, parameterized SQLite queries, security middleware, and automated API tests.
 
@@ -12,11 +14,11 @@
 
 ---
 
-## 1. Project Overview & Task 3 Satisfaction
+## 1. Project Overview & Final Task 4 Capstone
 
-**InternHub** is a full-stack internship portal where students and graduates can browse internship listings and submit applications.
+**InternHub** is the final Task 4 production-readiness capstone: a full-stack internship portal where students and graduates can browse internship listings and submit applications. It builds on the secure integration work from Task 3.
 
-### How this project fulfills EdVyro Task 3:
+### Task 4 production-readiness work:
 1. **API Data Fetching with Visible States**: React frontend asynchronously fetches internship data from the Express REST API, rendering an animated loading spinner during in-flight requests and an accessible `ErrorState` with a **Try Again** retry mechanism upon failure.
 2. **Dual-Layer Application Validation**: Application submission checks name length (2–100 characters) and email format in both the React modal and Express middleware. The API rejects duplicate submissions, closed internships, and nonexistent positions with appropriate HTTP status codes (`400`, `404`, `409`).
 3. **Multi-Tier API Protection**:
@@ -24,7 +26,7 @@
    - **Secure Headers**: Full Helmet suite (`X-Content-Type-Options: nosniff`, CSP frame protection, HSTS, Referrer-Policy, `x-powered-by` disabled).
    - **Administrative Authentication**: Internship mutation endpoints (`POST`, `PUT`, `DELETE /api/internships`) use `requireAdminAuth`. When `ADMIN_API_KEY` is set, callers must send it using `x-api-key` or `Authorization: Bearer <key>`. In production, mutations are disabled (403 Forbidden) if no key is configured.
    - **Parameterized SQL**: All database operations use `node:sqlite` parameter binding with `?` placeholders to prevent SQL injection.
-4. **Automated Testing & Public Submission**: 61 automated backend tests across 2 test suites verify API behavior, validation, error envelopes, rate limits, headers, applicant privacy, CORS, and authorization. The frontend is deployed on GitHub Pages and the backend on Render.
+4. **Automated Testing & Public Deployment**: Backend tests verify API behavior, validation, error envelopes, rate limits, headers, applicant privacy, CORS, and authorization. The frontend is deployed on GitHub Pages and the backend on Render.
 
 ---
 
@@ -184,6 +186,8 @@ npm ci
 ```bash
 npm --prefix server ci
 ```
+
+> **Windows PowerShell:** If the execution policy blocks `npm`, use the `npm.cmd` equivalent (for example, `npm.cmd ci`). Do not weaken the execution policy.
 
 ### 4. Configure environment variables
 
@@ -376,33 +380,41 @@ npm test
 node --test tests/api.test.js tests/security.test.js
 ```
 
-### Actual test results (verified on 2026-10-18, Node v24.21.0, npm 11.19.0)
+### Latest verified results (2026-10-20; Node v24.21.0, npm 11.19.0)
 
 ```
 npm test
-ℹ tests 61
+ℹ tests 62
 ℹ suites 2
-ℹ pass 61
+ℹ pass 62
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ```
 
 Coverage includes:
-- **26 REST API integration tests**: health checks, internship and application endpoints, query filtering, pagination, SQL injection protection, and constraint enforcement.
+- **27 REST API integration tests**: health checks, internship and application endpoints, query filtering, pagination, SQL injection protection, and constraint enforcement.
 - **35 security & integration tests**: Helmet headers, CORS and preflight, `x-powered-by` suppression, query bounds, applicant validation, duplicate and closed-internship guards, rate limits, body size limits, error envelope consistency, applicant privacy, and administrative authentication.
 
 The frontend does not currently have an automated UI test script. Its build and lint checks are run separately.
 
-### Frontend Build
-`npm run build` passed: Vite transformed 27 modules and completed without build errors.
+#### Build, lint, and live checks
+Commands run from the project root:
 
-### Frontend lint
-```bash
-npm run lint
+```powershell
+npm.cmd test
+npm.cmd run build
+npm.cmd run lint
+git diff --check
 ```
 
-Actual result: `oxlint` exited successfully without reporting warnings or errors.
+- **Automated tests**: 62 passed, 0 failures across 2 suites.
+- **Production build**: Successful; Vite transformed 27 modules.
+- **Lint**: 0 warnings and 0 errors.
+- **`git diff --check`**: Passed.
+- **Live backend health endpoint**: Verified healthy.
+- **Live internships API**: The verified API response contained four internship records.
+- **Frontend manual check**: Internship cards, search, filters, and form validation checked.
 
 ---
 
