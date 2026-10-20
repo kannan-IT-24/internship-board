@@ -14,12 +14,19 @@ describe('Task 4 – Secure Application Integration Tests', () => {
   let app;
   let testDb;
 
-  beforeEach(() => {
+  beforeEach((t) => {
     // Fresh isolated in-memory database for each test
-    testDb = getDb(':memory:');
-    initSchema(testDb);
-    seedDatabase(testDb);
-    app = createApp(testDb);
+    const db = getDb(':memory:');
+    testDb = db;
+    t.after(() => {
+      db.close();
+      if (testDb === db) {
+        testDb = null;
+      }
+    });
+    initSchema(db);
+    seedDatabase(db);
+    app = createApp(db);
   });
 
   // =========================================================================

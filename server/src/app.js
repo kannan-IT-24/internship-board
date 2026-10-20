@@ -86,7 +86,16 @@ export function createApp(customDb = null) {
   // -----------------------------------------------------------------------
   // Health check endpoint — unauthenticated, no PII
   // -----------------------------------------------------------------------
-  app.get('/api/health', (req, res) => {
+  app.get('/api/health', (req, res, next) => {
+    try {
+      req.app.locals.db.prepare('SELECT 1').get();
+    } catch {
+      const error = new Error('Database health check failed.');
+      error.statusCode = 503;
+      error.code = 'DATABASE_UNAVAILABLE';
+      return next(error);
+    }
+
     res.status(200).json({
       status: 'success',
       data: {

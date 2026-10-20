@@ -9,21 +9,57 @@ describe('InternHub REST API Automated Test Suite', () => {
   let app;
   let testDb;
 
-  beforeEach(() => {
+  beforeEach((t) => {
     // Isolated in-memory database for each test
-    testDb = getDb(':memory:');
-    initSchema(testDb);
-    seedDatabase(testDb);
-    app = createApp(testDb);
+    const db = getDb(':memory:');
+    testDb = db;
+    t.after(() => {
+      db.close();
+      if (testDb === db) {
+        testDb = null;
+      }
+    });
+    initSchema(db);
+    seedDatabase(db);
+    app = createApp(db);
   });
 
   // 1. Health endpoint
-  it('1. GET /api/health should return 200 with health status', async () => {
-    const res = await request(app).get('/api/health');
+  it('1. GET /api/health should return 200 when the database query succeeds', async () => {
+    const healthDb = testDb;
+    let healthQuery;
+    const healthApp = createApp({
+      prepare(sql) {
+        healthQuery = sql;
+        return healthDb.prepare(sql);
+      },
+    });
+    const res = await request(healthApp).get('/api/health');
+
     assert.equal(res.status, 200);
     assert.equal(res.body.status, 'success');
     assert.equal(res.body.data.status, 'healthy');
     assert.ok(res.body.data.message);
+    assert.equal(healthQuery, 'SELECT 1');
+  });
+
+  it('GET /api/health should return a safe 503 when the database query fails', async () => {
+    const failingApp = createApp({
+      prepare() {
+        return {
+          get() {
+            throw new Error('sensitive database failure detail');
+          },
+        };
+      },
+    });
+    const res = await request(failingApp).get('/api/health');
+
+    assert.equal(res.status, 503);
+    assert.equal(res.body.status, 'error');
+    assert.equal(res.body.error.code, 'INTERNAL_SERVER_ERROR');
+    assert.equal(res.body.error.message, 'An unexpected internal server error occurred.');
+    assert.doesNotMatch(JSON.stringify(res.body), /sensitive database failure detail/);
   });
 
   // 2. List internships
